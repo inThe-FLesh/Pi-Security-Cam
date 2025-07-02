@@ -1,0 +1,15 @@
+BasedOnStyle: LLVM
+IndentWidth: 2
+UseTab: Never
+NamespaceIndentation: Inner
+AllowShortFunctionsOnASingleLine: Inline
+DerivePointerAlignment: false
+PointerAlignment: Right
+SpaceBeforeParens: ControlStatements
+SpacesInAngles: false
+Standard: Cpp23
+ColumnLimit: 500
+BinPackParameters: true
+BinPackArguments: true
+AllowAllParametersOfDeclarationOnNextLine: false
+PenaltyAssignmentOnNewLine: 500
