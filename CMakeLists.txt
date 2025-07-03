@@ -1,29 +1,46 @@
-cmake_minimum_required(VERSION 4.0)
-project(BMWSecureCam CXX)
+cmake_minimum_required(VERSION 3.16)
+project(PiSecurityCam CXX)
 
+# Use Clang explicitly
 set(CMAKE_CXX_COMPILER clang++)
 set(CMAKE_C_COMPILER clang)
 
+# Enable compile_commands.json
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-# Find OpenCV
-find_package(OpenCV REQUIRED)
+# Find required packages
+find_package(spdlog REQUIRED)
 
-# Find libcamera via pkg-config
-find_package(PkgConfig REQUIRED)
-find_package(OpenCV REQUIRED)
-pkg_check_modules(libcamera REQUIRED IMPORTED_TARGET libcamera)
+# Define system include paths
+set(LIBCAMERA_INCLUDE_DIR "/usr/include/libcamera")
+set(OPENCV_INCLUDE_DIR "/usr/include/opencv4")
+set(FFMPEG_INCLUDE_DIR "/usr/include")  # FFmpeg headers are usually directly in here
 
-# Find FFmpeg manually via pkg-config
-pkg_check_modules(FFMPEG REQUIRED IMPORTED_TARGET libavcodec libavformat libavutil libswscale)
+# Set the C++ standard
+set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Add the executable
-add_executable(BMSecureCam src/main.cpp)
+# Add your executable
+add_executable(PiSecurityCam src/main.cpp)
 
-# Link libraries
-target_link_libraries(BMSecureCam
-    PRIVATE
-        PkgConfig::libcamera
-        PkgConfig::FFMPEG
-        OpenCV::OpenCV
+# Manually specify include directories
+target_include_directories(PiSecurityCam PRIVATE
+    ${LIBCAMERA_INCLUDE_DIR}
+    ${OPENCV_INCLUDE_DIR}
+    ${FFMPEG_INCLUDE_DIR}
+    ${PROJECT_SOURCE_DIR}/include
+)
+
+# Manually link required libraries
+target_link_libraries(PiSecurityCam PRIVATE
+    camera                         # libcamera
+    camera-base                    # libcamera-base
+    opencv_core                    # OpenCV core module
+    opencv_imgproc                 # OpenCV image processing
+    opencv_videoio                 # OpenCV video I/O
+    avcodec                        # FFmpeg codec
+    avformat                       # FFmpeg format handling
+    avutil                         # FFmpeg utility functions
+    swscale                        # FFmpeg scaling
+    spdlog::spdlog                 # spdlog for logging
 )
