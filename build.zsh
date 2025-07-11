@@ -106,7 +106,6 @@ if ! check_dependencies; then
         sudo apt install -y \
           build-essential ninja-build cmake bear clang zsh \
           libcamera-dev libopencv-dev libspdlog-dev || {
-
             echo "${YELLOW}⚠️ Attempting to fix broken packages...${NC}"
             sudo apt --fix-broken install -y || true
             sudo apt update
