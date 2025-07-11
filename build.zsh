@@ -127,7 +127,7 @@ if ! check_dependencies; then
                 libswscale-dev libswresample-dev
           }
         else
-          echo "${RASPBERRY}🍓 Skipping FFmpeg dev packages on Raspberry Pi — conflicts with RPi-patched versions.${NC}"
+          echo "${RASPBERRY}🍓 Skipping *all* FFmpeg dev packages on Raspberry Pi — they conflict with RPi-patched libraries.${NC}"
         fi
       fi
       ;;
