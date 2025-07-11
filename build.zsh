@@ -90,7 +90,7 @@ check_dependencies() {
 # 🔍 Check and optionally install dependencies
 if ! check_dependencies; then
   echo -n "📦 Do you want to install all required dependencies? (y/n): "
-  read -n 1 -r choice
+  read -k 1 choice
   echo # Newline for better readability
   case "$choice" in
     y|Y )
