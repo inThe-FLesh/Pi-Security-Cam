@@ -1,16 +1,18 @@
 #!/bin/zsh
 set -e
-trap 'echo "❌ Build failed at line $LINENO"; exit 1' ERR
+trap 'echo "${RED}❌ Build failed at line $LINENO${NC}"; exit 1' ERR
 
+# 🎨 Colors
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
+RASPBERRY='\033[1;35m'  # Bold magenta (raspberry)
+WHITE='\033[1;37m'
 NC='\033[0m' # No Color
 
-
-# Global for reuse
 pkgman=""
+is_rpi=false
 
 detect_package_manager() {
   if command -v pacman &>/dev/null; then
@@ -22,9 +24,16 @@ detect_package_manager() {
   fi
 }
 
+detect_raspberry_pi_os() {
+  if [[ -f /etc/os-release ]] && grep -qi 'raspbian\|raspberrypi' /etc/os-release; then
+    is_rpi=true
+  fi
+}
+
 check_dependencies() {
   local any_missing=false
   detect_package_manager
+  detect_raspberry_pi_os
 
   if [[ "$pkgman" == "pacman" ]]; then
     packages=(clang ninja cmake bear zsh libcamera opencv ffmpeg spdlog)
@@ -38,7 +47,7 @@ check_dependencies() {
     done
 
   elif [[ "$pkgman" == "dpkg" ]]; then
-    packages=(clang ninja-build cmake bear zsh libcamera-dev libopencv-dev libavcodec-dev libavformat-dev libavutil-dev libswscale-dev libspdlog-dev)
+    packages=(clang ninja-build cmake bear zsh libcamera-dev libopencv-dev libspdlog-dev)
     for pkg in "${packages[@]}"; do
       if dpkg -s "$pkg" &>/dev/null; then
         echo "${GREEN}✅ $pkg is installed${NC}"
@@ -47,6 +56,21 @@ check_dependencies() {
         any_missing=true
       fi
     done
+
+    # Check FFmpeg libs separately due to RPi conflicts
+    if $is_rpi; then
+      echo "${RASPBERRY}🍓 Raspberry Pi OS detected${NC}${GREEN} — using RPi-specific FFmpeg package handling.${NC}"
+    else
+      ffmpeg_pkgs=(libavcodec-dev libavformat-dev libavutil-dev libswscale-dev libswresample-dev)
+      for pkg in "${ffmpeg_pkgs[@]}"; do
+        if dpkg -s "$pkg" &>/dev/null; then
+          echo "${GREEN}✅ $pkg is installed${NC}"
+        else
+          echo "${RED}❌ $pkg is missing${NC}"
+          any_missing=true
+        fi
+      done
+    fi
 
   else
     echo "${RED}❌ Unsupported package manager. Please install dependencies manually.${NC}"
@@ -62,58 +86,83 @@ if ! check_dependencies; then
   read choice
   case "$choice" in
     y|Y )
-      echo "Installing dependencies... 🔧"
+      echo "${BLUE}Installing dependencies... 🔧${NC}"
       if [[ "$pkgman" == "pacman" ]]; then
         sudo pacman -S --needed clang ninja cmake bear zsh libcamera opencv ffmpeg spdlog
       elif [[ "$pkgman" == "dpkg" ]]; then
         sudo apt update
+
+        # Install core packages
         sudo apt install -y \
           build-essential ninja-build cmake bear clang zsh \
-          libcamera-dev libopencv-dev \
-          libavcodec-dev libavformat-dev libavutil-dev libswscale-dev \
-          libspdlog-dev
+          libcamera-dev libopencv-dev libspdlog-dev || {
+
+            echo "${YELLOW}⚠️ Attempting to fix broken packages...${NC}"
+            sudo apt --fix-broken install -y || true
+            sudo apt update
+            sudo apt install -y \
+              build-essential ninja-build cmake bear clang zsh \
+              libcamera-dev libopencv-dev libspdlog-dev
+        }
+
+        # Install FFmpeg separately on Raspberry Pi
+        if $is_rpi; then
+          echo "${BLUE}Installing FFmpeg dev packages with Raspberry Pi-specific versions...${NC}"
+          sudo apt install -y \
+            libavcodec-dev libavformat-dev libavutil-dev \
+            libswscale-dev libswresample-dev || {
+              echo "${YELLOW}⚠️ Attempting recovery for FFmpeg packages...${NC}"
+              sudo apt --fix-broken install -y || true
+              sudo apt install -y \
+                libavcodec-dev libavformat-dev libavutil-dev \
+                libswscale-dev libswresample-dev
+          }
+        else
+          # Normal install for Debian-based systems
+          sudo apt install -y \
+            libavcodec-dev libavformat-dev libavutil-dev \
+            libswscale-dev libswresample-dev
+        fi
       fi
       ;;
     n|N )
-      echo "Skipping dependency installation. Build cancelled 🚫"
+      echo "${YELLOW}Skipping dependency installation. Build cancelled 🚫${NC}"
       exit 1
       ;;
     * )
-      echo "Invalid choice. Please run the script again and choose 'y' or 'n'."
+      echo "${RED}Invalid choice. Please run the script again and choose 'y' or 'n'.${NC}"
       exit 1
       ;;
   esac
 else
-  echo "All required dependencies are installed. ✅"
+  echo "${GREEN}✅ All required dependencies are installed. Proceeding with the build...${NC}"
 fi
 
 # 🏗️ Proceed with build
 echo "🔍 Checking for presence of build directory"
 
 if [[ -d build ]]; then
-  echo "Build directory exists. Continuing build... ✅"
+  echo "${BLUE}Build directory exists. Continuing build... ✅${NC}"
 else
-  echo "${YELLOW}Build directory not found. Creating build directory... 🛠️${NC}"
   mkdir build
-  echo "Build directory created. 📁"
+  echo "${BLUE}Build directory created. 📁${NC}"
 fi
 
 cd build
 
-echo "${BLUE}Starting ninja build with Clang ⚙️"
+echo "${BLUE}Starting ninja build with Clang ⚙️${NC}"
 
 cmake -G Ninja \
   -DCMAKE_C_COMPILER=clang \
   -DCMAKE_CXX_COMPILER=clang++ \
   ..
 
-echo "Wrapping build with Bear 🐻"
+echo "${BLUE}Wrapping build with Bear 🐻${NC}"
 bear -- ninja
 
 cd ..
 
 ln -sf build/compile_commands.json compile_commands.json
-
 cp build/PiSecurityCam PiSecurityCam
 
-echo "Build Complete ✅"
+echo "${GREEN}✅ Build Complete!${NC}"
