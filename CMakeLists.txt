@@ -21,7 +21,10 @@ set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Add your executable
-add_executable(PiSecurityCam src/main.cpp)
+add_executable(PiSecurityCam 
+    src/main.cpp
+    src/pi_camera/pi_device_camera_manager.cpp
+)
 
 # Manually specify include directories
 target_include_directories(PiSecurityCam PRIVATE

@@ -27,4 +27,6 @@ cd ..
 
 ln -sf build/compile_commands.json compile_commands.json
 
+cp build/PiSecurityCam PiSecurityCam
+
 echo "Build Complete ✅"
