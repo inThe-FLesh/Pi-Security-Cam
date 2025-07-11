@@ -77,22 +77,21 @@ check_dependencies() {
         fi
       done
     fi
-
-  elif [[ "$pkgman" == "unknown" ]]; then
-    echo "${YELLOW}⚠️ No supported package manager found. Please install dependencies manually. pkgman=${pkgman}${NC}"
-    any_missing=1
-  else
-    echo "${RED}❌ Unsupported package manager. Please install dependencies manually.${NC}"
-    exit 1
   fi
 
-  $any_missing && return 1 || return 0
+  if [[ "$pkgman" == "unknown" ]]; then
+    echo "${YELLOW}⚠️ No supported package manager found. Please install dependencies manually. pkgman=${pkgman}${NC}"
+    any_missing=1
+  fi
+
+  return $any_missing
 }
 
 # 🔍 Check and optionally install dependencies
 if ! check_dependencies; then
   echo -n "📦 Do you want to install all required dependencies? (y/n): "
-  read choice
+  read -n 1 -r choice
+  echo # Newline for better readability
   case "$choice" in
     y|Y )
       echo "${BLUE}Installing dependencies... 🔧${NC}"
