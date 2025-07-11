@@ -114,7 +114,7 @@ if ! check_dependencies; then
               libcamera-dev libopencv-dev libspdlog-dev
         }
 
-        if [[ "$is_rpi" == false ]]; then
+        if ! $is_rpi; then
           echo "${BLUE}Installing FFmpeg dev packages...${NC}"
           sudo apt install -y \
             libavcodec-dev libavformat-dev libavutil-dev \
