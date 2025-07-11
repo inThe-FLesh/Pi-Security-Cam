@@ -1,6 +1,6 @@
 #!/bin/zsh
 set -e
-trap 'echo "${RED}❌ Build failed at line $LINENO${NC}"; exit 1' ERR
+trap "echo \"${RED}❌ Build failed at line \$LINENO${NC}\"; exit 1" ERR
 
 # 🎨 Colors
 RED='\033[0;31m'
@@ -25,13 +25,21 @@ detect_package_manager() {
 }
 
 detect_raspberry_pi_os() {
-  if [[ -f /etc/os-release ]] && grep -qi 'raspbian\|raspberrypi' /etc/os-release; then
+  if [[ -f /etc/os-release ]] && grep -qiE 'raspbian|raspberrypi' /etc/os-release; then
     is_rpi=true
+  elif grep -q "Raspberry Pi" /proc/cpuinfo; then
+    is_rpi=true
+  else
+    is_rpi=false
+  fi
+
+  if $is_rpi; then
+    echo "${RASPBERRY}🍓 Raspberry Pi OS detected${NC}${WHITE} — using RPi-specific FFmpeg package handling.${NC}"
   fi
 }
 
 check_dependencies() {
-  local any_missing=false
+  local any_missing=0
   detect_package_manager
   detect_raspberry_pi_os
 
@@ -42,7 +50,7 @@ check_dependencies() {
         echo "${GREEN}✅ $pkg is installed${NC}"
       else
         echo "${RED}❌ $pkg is missing${NC}"
-        any_missing=true
+        any_missing=1
       fi
     done
 
@@ -53,25 +61,26 @@ check_dependencies() {
         echo "${GREEN}✅ $pkg is installed${NC}"
       else
         echo "${RED}❌ $pkg is missing${NC}"
-        any_missing=true
+        any_missing=1
       fi
     done
 
     # Check FFmpeg libs separately due to RPi conflicts
-    if $is_rpi; then
-      echo "${RASPBERRY}🍓 Raspberry Pi OS detected${NC}${GREEN} — using RPi-specific FFmpeg package handling.${NC}"
-    else
+    if ! $is_rpi; then
       ffmpeg_pkgs=(libavcodec-dev libavformat-dev libavutil-dev libswscale-dev libswresample-dev)
       for pkg in "${ffmpeg_pkgs[@]}"; do
         if dpkg -s "$pkg" &>/dev/null; then
           echo "${GREEN}✅ $pkg is installed${NC}"
         else
           echo "${RED}❌ $pkg is missing${NC}"
-          any_missing=true
+          any_missing=1
         fi
       done
     fi
 
+  elif [[ "$pkgman" == "unknown" ]]; then
+    echo "${YELLOW}⚠️ No supported package manager found. Please install dependencies manually. pkgman=${pkgman}${NC}"
+    any_missing=1
   else
     echo "${RED}❌ Unsupported package manager. Please install dependencies manually.${NC}"
     exit 1
@@ -105,24 +114,18 @@ if ! check_dependencies; then
               libcamera-dev libopencv-dev libspdlog-dev
         }
 
-        # Install FFmpeg separately on Raspberry Pi
-        if $is_rpi; then
-          echo "${BLUE}Installing FFmpeg dev packages with Raspberry Pi-specific versions...${NC}"
-          sudo apt install -y \
-            libavcodec-dev libavformat-dev libavutil-dev \
-            libswscale-dev libswresample-dev || {
-              echo "${YELLOW}⚠️ Attempting recovery for FFmpeg packages...${NC}"
-              sudo apt --fix-broken install -y || true
-              sudo apt install -y \
-                libavcodec-dev libavformat-dev libavutil-dev \
-                libswscale-dev libswresample-dev
-          }
-        else
-          # Normal install for Debian-based systems
-          sudo apt install -y \
-            libavcodec-dev libavformat-dev libavutil-dev \
-            libswscale-dev libswresample-dev
-        fi
+        echo "${BLUE}Installing FFmpeg dev packages...${NC}"
+        sudo apt install -y \
+          libavcodec-dev libavformat-dev libavutil-dev \
+          libswscale-dev libswresample-dev || {
+            echo "${YELLOW}⚠️ Attempting recovery for FFmpeg packages...${NC}"
+            sudo apt --fix-broken install -y || true
+            sudo apt update
+            sudo apt install -y \
+              libavcodec-dev libavformat-dev libavutil-dev \
+              libswscale-dev libswresample-dev
+        }
+
       fi
       ;;
     n|N )
