@@ -3,9 +3,9 @@
 #include <libcamera/libcamera.h>
 
 namespace pi_security_cam::pi_camera {
-class CameraPipeline {
+class CameraSession {
    public:
-    CameraPipeline();
+    CameraSession();
 
     void configure();
     void start();
