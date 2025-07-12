@@ -47,7 +47,7 @@ check_dependencies() {
   detect_raspberry_pi_os
 
   if [[ "$pkgman" == "pacman" ]]; then
-    packages=(clang ninja cmake bear zsh libcamera opencv ffmpeg spdlog)
+    packages=(clang ninja cmake bear zsh libcamera opencv ffmpeg spdlog libcamera)
     for pkg in "${packages[@]}"; do
       if pacman -Q "$pkg" &>/dev/null; then
         echo "${GREEN}✅ $pkg is installed${NC}"

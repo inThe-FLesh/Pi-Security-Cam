@@ -12,8 +12,31 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 find_package(spdlog REQUIRED)
 find_package(OpenCV REQUIRED COMPONENTS core imgproc)
 
+# Find libcamera libs and headers
+find_path(LIBCAMERA_INCLUDE_DIR
+  NAMES libcamera/camera_manager.h
+  PATHS /usr/include/libcamera /usr/local/include/libcamera
+)
+
+find_library(LIBCAMERA_LIB
+  NAMES camera
+  PATHS /usr/lib /usr/lib/aarch64-linux-gnu
+)
+
+find_library(LIBCAMERA_BASE_LIB
+  NAMES camera-base
+  PATHS /usr/lib /usr/lib/aarch64-linux-gnu
+)
+
+message(STATUS "libcamera include: ${LIBCAMERA_INCLUDE_DIR}")
+message(STATUS "libcamera lib: ${LIBCAMERA_LIB}")
+message(STATUS "libcamera base lib: ${LIBCAMERA_BASE_LIB}")
+
+if(NOT LIBCAMERA_INCLUDE_DIR OR NOT LIBCAMERA_LIB OR NOT LIBCAMERA_BASE_LIB)
+  message(FATAL_ERROR "❌ libcamera not found. Cannot build this project.")
+endif()
+
 # Define system include paths
-set(LIBCAMERA_INCLUDE_DIR "/usr/include/libcamera")
 set(OPENCV_INCLUDE_DIR "/usr/include/opencv4")
 set(FFMPEG_INCLUDE_DIR "/usr/include")  # FFmpeg headers are usually directly in here
 
@@ -37,9 +60,9 @@ target_include_directories(PiSecurityCam PRIVATE
 
 # Manually link required libraries
 target_link_libraries(PiSecurityCam PRIVATE
-    ${OpenCV_LIBS}         # Properly handles linking OpenCV libs
-    camera                 # libcamera
-    camera-base            # libcamera-base
-    spdlog::spdlog         # spdlog
-    fmt::fmt               # if using fmt explicitly
+    ${OpenCV_LIBS}
+    ${LIBCAMERA_LIB}
+    ${LIBCAMERA_BASE_LIB}
+    spdlog::spdlog         # logging library
+    fmt::fmt
 )
