@@ -7,9 +7,9 @@ RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
-RASPBERRY='\033[1;35m'  # Bold magenta (raspberry)
+RASPBERRY='\033[1;35m'
 WHITE='\033[1;37m'
-NC='\033[0m' # No Color
+NC='\033[0m'
 
 pkgman=""
 is_rpi=false
@@ -33,20 +33,15 @@ detect_raspberry_pi_os() {
     is_rpi=false
   fi
 
-# 🍓 Pin FFmpeg libraries to Raspberry Pi versions to avoid conflict
   if $is_rpi; then
-    echo "${RASPBERRY}🍓 Setting APT preference to force Raspberry Pi FFmpeg versions...${NC}"
-    sudo mkdir -p /etc/apt/preferences.d
-    sudo tee /etc/apt/preferences.d/rpi-ffmpeg > /dev/null <<'EOF'
-Package: libavcodec* libavformat* libavutil* libswresample* libswscale*
-Pin: origin archive.raspberrypi.com
-Pin-Priority: 1001
-EOF
+    echo "${RASPBERRY}🍓 Raspberry Pi OS detected${NC}${WHITE} — using RPi-specific OpenCV package.${NC}"
   fi
 }
 
 check_dependencies() {
   local any_missing=0
+  detect_package_manager
+  detect_raspberry_pi_os
 
   if [[ "$pkgman" == "pacman" ]]; then
     packages=(clang ninja cmake bear zsh libcamera opencv ffmpeg spdlog)
@@ -69,40 +64,19 @@ check_dependencies() {
         any_missing=1
       fi
     done
-
-    if ! $is_rpi; then
-      ffmpeg_pkgs=(libavcodec-dev libavformat-dev libavutil-dev libswscale-dev libswresample-dev)
-      for pkg in "${ffmpeg_pkgs[@]}"; do
-        if dpkg -s "$pkg" &>/dev/null; then
-          echo "${GREEN}✅ $pkg is installed${NC}"
-        else
-          echo "${RED}❌ $pkg is missing${NC}"
-          any_missing=1
-        fi
-      done
-    else
-      echo "${RASPBERRY}🍓 Skipping FFmpeg dev packages on Raspberry Pi — conflicts with RPi-patched versions.${NC}"
-    fi
-
   else
-    echo "${YELLOW}⚠️ No supported package manager found. Please install dependencies manually. pkgman=${pkgman}${NC}"
+    echo "${YELLOW}⚠️ No supported package manager found. Please install dependencies manually.${NC}"
     any_missing=1
   fi
 
   return $any_missing
 }
 
-# 🔍 Detect platform before checking dependencies
-detect_package_manager
-detect_raspberry_pi_os
-
-echo "DEBUG: is_rpi = $is_rpi"
-
 # 🔍 Check and optionally install dependencies
 if ! check_dependencies; then
   echo -n "📦 Do you want to install all required dependencies? (y/n): "
   read -k 1 choice
-  echo  # Newline to avoid prompt clutter
+  echo
   case "$choice" in
     y|Y )
       echo "${BLUE}Installing dependencies... 🔧${NC}"
@@ -110,8 +84,6 @@ if ! check_dependencies; then
         sudo pacman -S --needed clang ninja cmake bear zsh libcamera opencv ffmpeg spdlog
       elif [[ "$pkgman" == "dpkg" ]]; then
         sudo apt update
-
-        # Install core packages
         sudo apt install -y \
           build-essential ninja-build cmake bear clang zsh \
           libcamera-dev libopencv-dev libspdlog-dev || {
@@ -122,22 +94,6 @@ if ! check_dependencies; then
               build-essential ninja-build cmake bear clang zsh \
               libcamera-dev libopencv-dev libspdlog-dev
         }
-
-        if ! $is_rpi; then
-          echo "${BLUE}Installing FFmpeg dev packages...${NC}"
-          sudo apt install -y \
-            libavcodec-dev libavformat-dev libavutil-dev \
-            libswscale-dev libswresample-dev || {
-              echo "${YELLOW}⚠️ Attempting recovery for FFmpeg packages...${NC}"
-              sudo apt --fix-broken install -y || true
-              sudo apt update
-              sudo apt install -y \
-                libavcodec-dev libavformat-dev libavutil-dev \
-                libswscale-dev libswresample-dev
-          }
-        else
-          echo "${RASPBERRY}🍓 Skipping *all* FFmpeg dev packages on Raspberry Pi — they conflict with RPi-patched libraries.${NC}"
-        fi
       fi
       ;;
     n|N )
@@ -168,7 +124,6 @@ cd build
 echo "${BLUE}Starting ninja build with Clang ⚙️${NC}"
 
 cmake -G Ninja \
-  -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
   -DCMAKE_C_COMPILER=clang \
   -DCMAKE_CXX_COMPILER=clang++ \
   ..
