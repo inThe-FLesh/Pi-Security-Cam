@@ -1,6 +1,6 @@
 #!/bin/zsh
 set -e
-trap "echo \"${RED}❌ Build failed at line \$LINENO${NC}\"; exit 1" ERR
+trap "echo \"${RED}❌ Build failed at line $LINENO${NC}\"; exit 1" ERR
 
 # 🎨 Colors
 RED='\033[0;31m'
@@ -14,6 +14,7 @@ NC='\033[0m'
 pkgman=""
 is_rpi=false
 
+# Detect package manager
 detect_package_manager() {
   if command -v pacman &>/dev/null; then
     pkgman="pacman"
@@ -24,6 +25,7 @@ detect_package_manager() {
   fi
 }
 
+# Detect Raspberry Pi OS
 detect_raspberry_pi_os() {
   if [[ -f /etc/os-release ]] && grep -qiE 'raspbian|raspberrypi' /etc/os-release; then
     is_rpi=true
@@ -34,10 +36,11 @@ detect_raspberry_pi_os() {
   fi
 
   if $is_rpi; then
-    echo "${RASPBERRY}🍓 Raspberry Pi OS detected${NC}${WHITE} — using RPi-specific OpenCV package.${NC}"
+    echo "${RASPBERRY}🍓 Raspberry Pi OS detected${NC}${WHITE} — building OpenCV from source${NC}"
   fi
 }
 
+# Check for required dependencies
 check_dependencies() {
   local any_missing=0
   detect_package_manager
@@ -55,7 +58,8 @@ check_dependencies() {
     done
 
   elif [[ "$pkgman" == "dpkg" ]]; then
-    packages=(clang ninja-build cmake bear zsh libcamera-dev libopencv-dev libspdlog-dev)
+    # We only check libcamera-dev and libspdlog-dev here; OpenCV will be built from source
+    packages=(clang ninja-build cmake bear zsh libcamera-dev libspdlog-dev git)
     for pkg in "${packages[@]}"; do
       if dpkg -s "$pkg" &>/dev/null; then
         echo "${GREEN}✅ $pkg is installed${NC}"
@@ -72,7 +76,7 @@ check_dependencies() {
   return $any_missing
 }
 
-# 🔍 Check and optionally install dependencies
+# Main dependency installation
 if ! check_dependencies; then
   echo -n "📦 Do you want to install all required dependencies? (y/n): "
   read -k 1 choice
@@ -81,18 +85,18 @@ if ! check_dependencies; then
     y|Y )
       echo "${BLUE}Installing dependencies... 🔧${NC}"
       if [[ "$pkgman" == "pacman" ]]; then
-        sudo pacman -S --needed clang ninja cmake bear zsh libcamera opencv ffmpeg spdlog
+        sudo pacman -S --needed clang ninja cmake bear zsh libcamera opencv ffmpeg spdlog git
       elif [[ "$pkgman" == "dpkg" ]]; then
         sudo apt update
         sudo apt install -y \
-          build-essential ninja-build cmake bear clang zsh \
-          libcamera-dev libopencv-dev libspdlog-dev || {
+          build-essential ninja-build cmake bear clang zsh git \
+          libcamera-dev libspdlog-dev || {
             echo "${YELLOW}⚠️ Attempting to fix broken packages...${NC}"
             sudo apt --fix-broken install -y || true
             sudo apt update
             sudo apt install -y \
-              build-essential ninja-build cmake bear clang zsh \
-              libcamera-dev libopencv-dev libspdlog-dev
+              build-essential ninja-build cmake bear clang zsh git \
+              libcamera-dev libspdlog-dev
         }
       fi
       ;;
@@ -109,7 +113,39 @@ else
   echo "${GREEN}✅ All required dependencies are installed. Proceeding with the build...${NC}"
 fi
 
-# 🏗️ Proceed with build
+# If on Raspberry Pi OS, build OpenCV from source
+if [[ "$pkgman" == "dpkg" ]] && $is_rpi; then
+  echo "${BLUE}Cloning OpenCV repositories…${NC}"
+  cd /tmp
+  git clone --depth 1 https://github.com/opencv/opencv.git
+  git clone --depth 1 https://github.com/opencv/opencv_contrib.git
+
+  echo "${BLUE}Configuring OpenCV build…${NC}"
+  mkdir -p opencv/build && cd opencv/build
+  cmake -G Ninja \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_INSTALL_PREFIX=/usr/local \
+    -DOPENCV_EXTRA_MODULES_PATH=/tmp/opencv_contrib/modules \
+    -DBUILD_EXAMPLES=OFF \
+    -DBUILD_TESTS=OFF \
+    -DBUILD_DOCS=OFF \
+    -DBUILD_LIST=core,imgproc,video \
+    -DWITH_V4L=ON \
+    -DWITH_OPENGL=ON \
+    ..
+
+  echo "${BLUE}Building OpenCV (this will take ~1h)…${NC}"
+  ninja -j$(nproc)
+
+  echo "${BLUE}Installing OpenCV…${NC}"
+  sudo ninja install
+  sudo ldconfig
+
+  echo "${BLUE}Cleaning up…${NC}"
+  rm -rf /tmp/opencv /tmp/opencv_contrib
+fi
+
+# 🏗️ Proceed with project build
 echo "🔍 Checking for presence of build directory"
 
 if [[ -d build ]]; then
