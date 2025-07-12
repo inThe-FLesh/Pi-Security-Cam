@@ -2,6 +2,25 @@
 set -e
 trap "echo \"${RED}❌ Build failed at line $LINENO${NC}\"; exit 1" ERR
 
+CLEAN_BUILD=false
+
+for arg in "$@"; do
+  case $arg in
+    --clean-build)
+      CLEAN_BUILD=true
+      shift
+      ;;
+    *)
+      ;;
+  esac
+done
+
+if $CLEAN_BUILD; then
+  echo "🧹 Performing clean build..."
+  rm -rf build
+  mkdir build
+fi
+
 # 🎨 Colors
 RED='\033[0;31m'
 GREEN='\033[0;32m'
