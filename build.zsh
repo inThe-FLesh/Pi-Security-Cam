@@ -66,7 +66,7 @@ check_dependencies() {
   detect_raspberry_pi_os
 
   if [[ "$pkgman" == "pacman" ]]; then
-    packages=(clang ninja cmake bear zsh libcamera opencv ffmpeg spdlog libcamera)
+    packages=(clang ninja cmake bear zsh libcamera opencv ffmpeg spdlog libcamera ccache)
     for pkg in "${packages[@]}"; do
       if pacman -Q "$pkg" &>/dev/null; then
         echo "${GREEN}✅ $pkg is installed${NC}"
@@ -104,12 +104,12 @@ if ! check_dependencies; then
     y|Y )
       echo "${BLUE}Installing dependencies... 🔧${NC}"
       if [[ "$pkgman" == "pacman" ]]; then
-        sudo pacman -S --needed clang ninja cmake bear zsh libcamera opencv ffmpeg spdlog git
+        sudo pacman -S --needed clang ninja cmake bear zsh libcamera opencv ffmpeg spdlog git ccache
       elif [[ "$pkgman" == "dpkg" ]]; then
         sudo apt update
         sudo apt install -y \
           build-essential ninja-build cmake bear clang zsh git \
-          libcamera-dev libspdlog-dev || {
+          libcamera-dev libspdlog-dev ccache || {
             echo "${YELLOW}⚠️ Attempting to fix broken packages...${NC}"
             sudo apt --fix-broken install -y || true
             sudo apt update

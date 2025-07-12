@@ -5,6 +5,13 @@ project(PiSecurityCam CXX)
 set(CMAKE_CXX_COMPILER clang++)
 set(CMAKE_C_COMPILER clang)
 
+# Add ccache for faster builds
+set(CMAKE_C_COMPILER_LAUNCHER ccache)
+set(CMAKE_CXX_COMPILER_LAUNCHER ccache)
+
+# Set clang flag for optimizations 
+set(CMAKE_CXX_FLAGS_RELEASE "-O2 -march=native")
+
 # Enable compile_commands.json
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
