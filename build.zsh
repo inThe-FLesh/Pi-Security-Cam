@@ -115,34 +115,38 @@ fi
 
 # If on Raspberry Pi OS, build OpenCV from source
 if [[ "$pkgman" == "dpkg" ]] && $is_rpi; then
-  echo "${BLUE}Cloning OpenCV repositories…${NC}"
-  cd /tmp
-  git clone --depth 1 https://github.com/opencv/opencv.git
-  git clone --depth 1 https://github.com/opencv/opencv_contrib.git
+  if command -v opencv_version &>/dev/null; then
+    echo "${YELLOW}⚠️  OpenCV is already installed. Skipping build.${NC}"
+  else
+    echo "${BLUE}Cloning OpenCV repositories…${NC}"
+    cd /tmp
+    git clone --depth 1 https://github.com/opencv/opencv.git
+    git clone --depth 1 https://github.com/opencv/opencv_contrib.git
 
-  echo "${BLUE}Configuring OpenCV build…${NC}"
-  mkdir -p opencv/build && cd opencv/build
-  cmake -G Ninja \
-    -DCMAKE_BUILD_TYPE=Release \
-    -DCMAKE_INSTALL_PREFIX=/usr/local \
-    -DOPENCV_EXTRA_MODULES_PATH=/tmp/opencv_contrib/modules \
-    -DBUILD_EXAMPLES=OFF \
-    -DBUILD_TESTS=OFF \
-    -DBUILD_DOCS=OFF \
-    -DBUILD_LIST=core,imgproc,video \
-    -DWITH_V4L=ON \
-    -DWITH_OPENGL=ON \
-    ..
+    echo "${BLUE}Configuring OpenCV build…${NC}"
+    mkdir -p opencv/build && cd opencv/build
+    cmake -G Ninja \
+      -DCMAKE_BUILD_TYPE=Release \
+      -DCMAKE_INSTALL_PREFIX=/usr/local \
+      -DOPENCV_EXTRA_MODULES_PATH=/tmp/opencv_contrib/modules \
+      -DBUILD_EXAMPLES=OFF \
+      -DBUILD_TESTS=OFF \
+      -DBUILD_DOCS=OFF \
+      -DBUILD_LIST=core,imgproc,video \
+      -DWITH_V4L=ON \
+      -DWITH_OPENGL=ON \
+      ..
 
-  echo "${BLUE}Building OpenCV (this will take ~1h)…${NC}"
-  ninja -j$(nproc)
+    echo "${BLUE}Building OpenCV (this will take ~1h)…${NC}"
+    ninja -j$(nproc)
 
-  echo "${BLUE}Installing OpenCV…${NC}"
-  sudo ninja install
-  sudo ldconfig
+    echo "${BLUE}Installing OpenCV…${NC}"
+    sudo ninja install
+    sudo ldconfig
 
-  echo "${BLUE}Cleaning up…${NC}"
-  rm -rf /tmp/opencv /tmp/opencv_contrib
+    echo "${BLUE}Cleaning up…${NC}"
+    rm -rf /tmp/opencv /tmp/opencv_contrib
+  fi
 fi
 
 # 🏗️ Proceed with project build
