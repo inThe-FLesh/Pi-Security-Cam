@@ -135,6 +135,8 @@ if [[ "$pkgman" == "dpkg" ]] && $is_rpi; then
       -DBUILD_LIST=core,imgproc,video \
       -DWITH_V4L=ON \
       -DWITH_OPENGL=ON \
+      -DBUILD_LIST=core,imgproc,videoio \
+      -DWITH_FFMPEG=OFF \
       ..
 
     echo "${BLUE}Building OpenCV (this will take ~1h)…${NC}"
