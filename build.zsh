@@ -89,6 +89,8 @@ check_dependencies() {
 detect_package_manager
 detect_raspberry_pi_os
 
+echo "DEBUG: is_rpi = $is_rpi"
+
 # 🔍 Check and optionally install dependencies
 if ! check_dependencies; then
   echo -n "📦 Do you want to install all required dependencies? (y/n): "
@@ -113,8 +115,6 @@ if ! check_dependencies; then
               build-essential ninja-build cmake bear clang zsh \
               libcamera-dev libopencv-dev libspdlog-dev
         }
-
-        echo "DEBUG: is_rpi = $is_rpi"
 
         if ! $is_rpi; then
           echo "${BLUE}Installing FFmpeg dev packages...${NC}"
