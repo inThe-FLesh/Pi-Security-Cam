@@ -10,6 +10,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # Find required packages
 find_package(spdlog REQUIRED)
+find_package(OpenCV REQUIRED COMPONENTS core imgproc)
 
 # Define system include paths
 set(LIBCAMERA_INCLUDE_DIR "/usr/include/libcamera")
@@ -36,14 +37,9 @@ target_include_directories(PiSecurityCam PRIVATE
 
 # Manually link required libraries
 target_link_libraries(PiSecurityCam PRIVATE
-    camera                         # libcamera
-    camera-base                    # libcamera-base
-    opencv_core                    # OpenCV core module
-    opencv_imgproc                 # OpenCV image processing
-    opencv_videoio                 # OpenCV video I/O
-    avcodec                        # FFmpeg codec
-    avformat                       # FFmpeg format handling
-    avutil                         # FFmpeg utility functions
-    swscale                        # FFmpeg scaling
-    spdlog::spdlog                 # spdlog for logging
+    ${OpenCV_LIBS}         # Properly handles linking OpenCV libs
+    camera                 # libcamera
+    camera-base            # libcamera-base
+    spdlog::spdlog         # spdlog
+    fmt::fmt               # if using fmt explicitly
 )
