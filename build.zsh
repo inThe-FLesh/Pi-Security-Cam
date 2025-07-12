@@ -33,8 +33,15 @@ detect_raspberry_pi_os() {
     is_rpi=false
   fi
 
+# 🍓 Pin FFmpeg libraries to Raspberry Pi versions to avoid conflict
   if $is_rpi; then
-    echo "${RASPBERRY}🍓 Raspberry Pi OS detected${NC}${WHITE} — using RPi-specific FFmpeg package handling.${NC}"
+    echo "${RASPBERRY}🍓 Setting APT preference to force Raspberry Pi FFmpeg versions...${NC}"
+    sudo mkdir -p /etc/apt/preferences.d
+    sudo tee /etc/apt/preferences.d/rpi-ffmpeg > /dev/null <<'EOF'
+Package: libavcodec* libavformat* libavutil* libswresample* libswscale*
+Pin: origin archive.raspberrypi.com
+Pin-Priority: 1001
+EOF
   fi
 }
 
